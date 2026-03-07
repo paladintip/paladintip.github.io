@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Down Payment vs. Rate Buydown</title>
+<style>
+  :root {
+    --primary: #3b82f6;
+    --surface: #ffffff;
+    --bg: #f1f5f9;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    padding: 24px 16px;
+  }
+  nav {
+    font-size: 13px;
+    margin-bottom: 20px;
+    color: var(--muted);
+  }
+  nav a { color: var(--primary); text-decoration: none; margin-right: 16px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .field-row { display: flex; gap: 8px; align-items: center; }
+  input[type="number"], select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+  }
+  input[type="range"] { width: 100%; accent-color: var(--primary); }
+  .input-prefix {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    width: 100%;
+  }
+  .input-prefix span {
+    padding: 8px 10px;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 13px;
+    border-right: 1px solid var(--border);
+  }
+  .input-prefix input {
+    border: none;
+    border-radius: 0;
+    flex: 1;
+    min-width: 0;
+  }
+  .summary-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .strat-card {
+    border-radius: var(--radius);
+    padding: 16px;
+    border: 2px solid var(--border);
+  }
+  .strat-card.a { border-color: #3b82f6; background: #eff6ff; }
+  .strat-card.b { border-color: #8b5cf6; background: #f5f3ff; }
+  .strat-card .label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-bottom: 8px;
+  }
+  .strat-card.a .label { color: #3b82f6; }
+  .strat-card.b .label { color: #8b5cf6; }
+  .strat-card .payment {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .strat-card .detail { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .strat-card .detail strong { color: var(--text); }
+  .breakeven-banner {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .breakeven-banner .icon { font-size: 20px; }
+  .breakeven-banner strong { color: #16a34a; }
+  canvas { width: 100%; border-radius: 8px; }
+  details { margin-top: 12px; }
+  details summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 500;
+    user-select: none;
+  }
+  details .inner { padding-top: 12px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 16px;
+  }
+  th {
+    text-align: left;
+    padding: 8px 10px;
+    background: var(--bg);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  tr.winner-a td { background: #eff6ff; }
+  tr.winner-b td { background: #f5f3ff; }
+  tr.breakeven td { background: #f0fdf4; font-weight: 600; }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+  .badge.a { background: #dbeafe; color: #1d4ed8; }
+  .badge.b { background: #ede9fe; color: #6d28d9; }
+  .badge.tie { background: #fef9c3; color: #854d0e; }
+  .show-all-btn {
+    display: block;
+    margin: 12px auto 0;
+    padding: 8px 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .pmi-warning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #92400e;
+    margin-top: 8px;
+  }
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    .summary-cards { grid-template-columns: 1fr; }
+  }
+  @media print {
+    nav, details summary, .show-all-btn { display: none; }
+    body { background: white; padding: 0; }
+    .layout { grid-template-columns: 1fr; }
+    table tbody tr { display: table-row !important; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="dashboard.html">← Dashboard</a>
+  <a href="affordability-calculator.html">Affordability</a>
+  <a href="scenario-builder.html">Scenarios</a>
+</nav>
+
+<div style="max-width:1100px;margin:0 auto">
+  <h1>Down Payment vs. Rate Buydown</h1>
+  <p class="subtitle">
+    Given a fixed amount of extra cash, should you increase your down payment
+    or use it to buy down your interest rate?
+  </p>
+</div>
+
+<div class="layout">
+
+  <!-- INPUTS -->
+  <div>
+    <div class="card">
+      <h2>Loan Inputs</h2>
+
+      <div class="field">
+        <label>Home Price</label>
+        <div class="input-prefix"><span>$</span>
+          <input type="number" id="price" value="400000" min="50000" step="5000" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Base Down Payment</label>
+        <div class="input-prefix"><span>$</span>
+          <input type="number" id="basedp" value="60000" min="0" step="1000" />
+        </div>
+        <input type="range" id="basedp_range" min="0" max="200000" step="1000" value="60000" style="margin-top:6px" />
+        <div style="font-size:12px;color:var(--muted);margin-top:2px" id="basedp_pct"></div>
+      </div>
+
+      <div class="field">
+        <label>Extra Cash to Allocate
+          <span title="This is the amount you are deciding how to use — add to down payment OR buy points." style="cursor:help;color:var(--primary)"> (?)</span>
+        </label>
+        <div class="input-prefix"><span>$</span>
+          <input type="number" id="extra" value="10000" min="0" step="500" />
+        </div>
+        <input type="range" id="extra_range" min="0" max="50000" step="500" value="10000" style="margin-top:6px" />
+      </div>
+
+      <div class="field">
+        <label>Base Interest Rate (%)</label>
+        <div class="field-row">
+          <button onclick="adj('rate',-0.125)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:var(--bg)">−</button>
+          <input type="number" id="rate" value="6.875" min="1" max="15" step="0.125" style="text-align:center" />
+          <button onclick="adj('rate',0.125)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:var(--bg)">+</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Points Considered (Strategy B)
+          <span title="Number of discount points to purchase with the extra cash. 1 point = 1% of loan amount." style="cursor:help;color:var(--primary)"> (?)</span>
+        </label>
+        <div class="field-row">
+          <button onclick="adj('points',-0.25)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:var(--bg)">−</button>
+          <input type="number" id="points" value="1" min="0" max="4" step="0.25" style="text-align:center" />
+          <button onclick="adj('points',0.25)" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:var(--bg)">+</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Loan Term</label>
+        <select id="term">
+          <option value="30">30-year fixed</option>
+          <option value="20">20-year fixed</option>
+          <option value="15">15-year fixed</option>
+        </select>
+      </div>
+
+      <details>
+        <summary>Assumptions</summary>
+        <div class="inner">
+          <div class="field">
+            <label>Rate reduction per point (%)</label>
+            <input type="number" id="rate_per_point" value="0.25" min="0.1" max="0.5" step="0.05" />
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">
+            Cost of 1 point = 1% of the <em>loan amount</em> for Strategy B.<br/>
+            Points are calculated from your extra cash budget automatically.
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div>
+
+    <div class="summary-cards">
+      <div class="strat-card a">
+        <div class="label">Strategy A — Bigger Down Payment</div>
+        <div class="payment" id="a_payment">—</div>
+        <div class="detail" id="a_detail">—</div>
+      </div>
+      <div class="strat-card b">
+        <div class="label">Strategy B — Buy Down the Rate</div>
+        <div class="payment" id="b_payment">—</div>
+        <div class="detail" id="b_detail">—</div>
+      </div>
+    </div>
+
+    <div id="pmi_warning" class="pmi-warning" style="display:none">
+      ⚠️ <strong>PMI alert:</strong> <span id="pmi_msg"></span>
+      PMI typically adds $50–$200/mo and is not included in the P&I figures above.
+    </div>
+
+    <div class="breakeven-banner" id="breakeven_banner">
+      <span class="icon">📍</span>
+      <div id="breakeven_text">Calculating…</div>
+    </div>
+
+    <div class="card">
+      <h2>Cumulative Interest Paid Over Time</h2>
+      <canvas id="chart" height="260"></canvas>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <h2>Year-by-Year Interest Comparison</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Year</th>
+            <th style="color:#3b82f6">A — Total Interest</th>
+            <th style="color:#8b5cf6">B — Total Interest</th>
+            <th>Difference</th>
+            <th>Lower Cost</th>
+          </tr>
+        </thead>
+        <tbody id="table_body"></tbody>
+      </table>
+      <button class="show-all-btn" id="show_all_btn" onclick="toggleTable()">Show all years ▾</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  let showAll = false;
+  let tableData = [];
+
+  function adj(id, delta) {
+    const el = $(id);
+    el.value = Math.round((parseFloat(el.value) + delta) * 1000) / 1000;
+    calc();
+  }
+
+  function fmt(n) {
+    return '$' + Math.round(n).toLocaleString();
+  }
+
+  function pmt(principal, annualRate, months) {
+    if (annualRate === 0) return principal / months;
+    const r = annualRate / 100 / 12;
+    return principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1);
+  }
+
+  // Returns array of {year, totalInterest} for each year 1..termYears
+  function buildSchedule(principal, annualRate, termYears) {
+    const months = termYears * 12;
+    const payment = pmt(principal, annualRate, months);
+    const r = annualRate / 100 / 12;
+    let balance = principal;
+    let cumInterest = 0;
+    const result = [];
+    for (let m = 1; m <= months; m++) {
+      const interestPaid = balance * r;
+      const principalPaid = payment - interestPaid;
+      cumInterest += interestPaid;
+      balance -= principalPaid;
+      if (m % 12 === 0) result.push({ year: m / 12, totalInterest: cumInterest });
+    }
+    return result;
+  }
+
+  function calc() {
+    const price = parseFloat($('price').value) || 0;
+    const basedp = parseFloat($('basedp').value) || 0;
+    const extra = parseFloat($('extra').value) || 0;
+    const baseRate = parseFloat($('rate').value) || 0;
+    const points = parseFloat($('points').value) || 0;
+    const term = parseInt($('term').value) || 30;
+    const ratePerPoint = parseFloat($('rate_per_point').value) || 0.25;
+
+    // Strategy A: bigger down payment
+    const dpA = basedp + extra;
+    const loanA = Math.max(0, price - dpA);
+    const rateA = baseRate;
+
+    // Strategy B: buy down rate with extra cash
+    // Cost of points = points * 1% of loan B's amount
+    // loanB = price - basedp
+    const loanB_base = Math.max(0, price - basedp);
+    // points budget: use extra cash as the budget for points
+    // points affordable = extra / (1% of loanB_base)
+    // but user chose # of points directly, so cost = points * 0.01 * loanB_base
+    const pointsCost = points * 0.01 * loanB_base;
+    const rateB = Math.max(0.5, baseRate - points * ratePerPoint);
+    const loanB = loanB_base; // down payment stays at basedp
+
+    // Update range sync
+    $('basedp_range').value = basedp;
+    $('extra_range').value = extra;
+    $('basedp_pct').textContent =
+      price > 0 ? `${((dpA / price) * 100).toFixed(1)}% down (Strategy A: ${(dpA/price*100).toFixed(1)}%)  |  ${(basedp/price*100).toFixed(1)}% down (Strategy B)` : '';
+
+    const payA = pmt(loanA, rateA, term * 12);
+    const payB = pmt(loanB, rateB, term * 12);
+
+    $('a_payment').textContent = fmt(payA) + '/mo';
+    $('a_detail').innerHTML =
+      `<strong>Loan:</strong> ${fmt(loanA)}<br>` +
+      `<strong>Rate:</strong> ${rateA.toFixed(3)}%<br>` +
+      `<strong>Down:</strong> ${fmt(dpA)} (${(dpA/price*100).toFixed(1)}%)`;
+
+    $('b_payment').textContent = fmt(payB) + '/mo';
+    $('b_detail').innerHTML =
+      `<strong>Loan:</strong> ${fmt(loanB)}<br>` +
+      `<strong>Rate:</strong> ${rateB.toFixed(3)}% (−${(points * ratePerPoint).toFixed(3)}%)<br>` +
+      `<strong>Points cost:</strong> ${fmt(pointsCost)} for ${points} pt${points !== 1 ? 's' : ''}`;
+
+    // PMI check (rough: <20% down)
+    const pmiWarning = $('pmi_warning');
+    const pmiMsg = $('pmi_msg');
+    const pmiA = dpA / price < 0.20;
+    const pmiB = basedp / price < 0.20;
+    if (pmiA || pmiB) {
+      pmiWarning.style.display = 'block';
+      const msgs = [];
+      if (pmiA) msgs.push(`Strategy A down payment (${(dpA/price*100).toFixed(1)}%) is under 20%`);
+      if (pmiB) msgs.push(`Strategy B down payment (${(basedp/price*100).toFixed(1)}%) is under 20%`);
+      pmiMsg.textContent = msgs.join(' and ') + '. ';
+    } else {
+      pmiWarning.style.display = 'none';
+    }
+
+    // Build schedules
+    const schedA = buildSchedule(loanA, rateA, term);
+    const schedB = buildSchedule(loanB, rateB, term);
+    tableData = schedA.map((row, i) => ({
+      year: row.year,
+      intA: row.totalInterest,
+      intB: schedB[i].totalInterest,
+    }));
+
+    // Break-even
+    let beYear = null;
+    // B starts with buying points (sunk cost = pointsCost)
+    // A starts with more equity
+    // We find when cumulative interest saving of B = pointsCost
+    // i.e. intA - intB >= pointsCost
+    for (let i = 0; i < tableData.length; i++) {
+      if (tableData[i].intA - tableData[i].intB >= pointsCost) {
+        beYear = tableData[i].year;
+        break;
+      }
+    }
+
+    const banner = $('breakeven_banner');
+    const beText = $('breakeven_text');
+    if (points === 0) {
+      banner.style.background = '#f8fafc';
+      banner.style.borderColor = '#e2e8f0';
+      beText.innerHTML = 'Enter points to compare strategies.';
+    } else if (!beYear) {
+      banner.style.background = '#fef2f2';
+      banner.style.borderColor = '#fecaca';
+      beText.innerHTML = `Strategy B <strong>never breaks even</strong> within the ${term}-year term. The rate reduction doesn't offset the cost of points for this loan.`;
+    } else {
+      const totalSavingFullTerm = tableData[term - 1].intA - tableData[term - 1].intB;
+      banner.style.background = '#f0fdf4';
+      banner.style.borderColor = '#bbf7d0';
+      beText.innerHTML =
+        `Strategy B breaks even at <strong>year ${beYear}</strong>. ` +
+        `If you stay longer, buying points saves more. ` +
+        `Full-term interest savings: <strong>${fmt(totalSavingFullTerm - pointsCost)}</strong> after recouping the ${fmt(pointsCost)} point cost.`;
+    }
+
+    renderTable();
+    renderChart(schedA, schedB, beYear, pointsCost);
+
+    // Persist
+    try {
+      localStorage.setItem('hvp_pvd_inputs', JSON.stringify({
+        price, basedp, extra, baseRate, points, term, ratePerPoint
+      }));
+    } catch(e) {}
+  }
+
+  function renderTable() {
+    const tbody = $('table_body');
+    const rows = showAll ? tableData : tableData.slice(0, 10);
+    const beYear = (() => {
+      const points = parseFloat($('points').value) || 0;
+      const basedp = parseFloat($('basedp').value) || 0;
+      const price = parseFloat($('price').value) || 1;
+      const loanB = Math.max(0, price - basedp);
+      const pointsCost = points * 0.01 * loanB;
+      for (let r of tableData) {
+        if (r.intA - r.intB >= pointsCost) return r.year;
+      }
+      return null;
+    })();
+
+    tbody.innerHTML = rows.map(r => {
+      const diff = Math.abs(r.intA - r.intB);
+      const aWins = r.intA < r.intB;
+      const tie = Math.abs(r.intA - r.intB) < 1;
+      const be = r.year === beYear;
+      const cls = be ? 'breakeven' : aWins ? 'winner-a' : 'winner-b';
+      const badge = tie ? '<span class="badge tie">Tie</span>'
+        : aWins ? '<span class="badge a">A</span>'
+        : '<span class="badge b">B</span>';
+      return `<tr class="${cls}">
+        <td><strong>Yr ${r.year}</strong>${be ? ' ✓ break-even' : ''}</td>
+        <td>${fmt(r.intA)}</td>
+        <td>${fmt(r.intB)}</td>
+        <td>${fmt(diff)}</td>
+        <td>${badge}</td>
+      </tr>`;
+    }).join('');
+
+    $('show_all_btn').style.display = tableData.length > 10 ? 'block' : 'none';
+    $('show_all_btn').textContent = showAll
+      ? 'Show fewer years ▴'
+      : `Show all ${tableData.length} years ▾`;
+  }
+
+  function toggleTable() {
+    showAll = !showAll;
+    renderTable();
+  }
+
+  function renderChart(schedA, schedB, beYear, pointsCost) {
+    const canvas = $('chart');
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.parentElement.clientWidth - 40;
+    const H = 260;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const pad = { top: 20, right: 20, bottom: 36, left: 72 };
+    const w = W - pad.left - pad.right;
+    const h = H - pad.top - pad.bottom;
+
+    const maxY = Math.max(...schedA.map(r => r.totalInterest), ...schedB.map(r => r.totalInterest));
+    const years = schedA.length;
+
+    function xp(year) { return pad.left + (year - 1) / (years - 1) * w; }
+    function yp(val)  { return pad.top + (1 - val / maxY) * h; }
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid lines
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + (i / 4) * h;
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + w, y); ctx.stroke();
+      const label = fmt(maxY * (1 - i / 4));
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px system-ui';
+      ctx.textAlign = 'right';
+      ctx.fillText(label, pad.left - 6, y + 4);
+    }
+
+    // Year labels
+    const step = years <= 15 ? 1 : years <= 20 ? 2 : 5;
+    ctx.fillStyle = '#94a3b8'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+    for (let y = 1; y <= years; y += step) {
+      ctx.fillText('Yr ' + y, xp(y), H - 8);
+    }
+
+    // Break-even vertical line
+    if (beYear) {
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(xp(beYear), pad.top);
+      ctx.lineTo(xp(beYear), pad.top + h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#16a34a';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('BE yr ' + beYear, xp(beYear), pad.top - 6);
+    }
+
+    // Strategy A line
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    schedA.forEach((r, i) => {
+      i === 0 ? ctx.moveTo(xp(r.year), yp(r.totalInterest))
+              : ctx.lineTo(xp(r.year), yp(r.totalInterest));
+    });
+    ctx.stroke();
+
+    // Strategy B line
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    schedB.forEach((r, i) => {
+      i === 0 ? ctx.moveTo(xp(r.year), yp(r.totalInterest))
+              : ctx.lineTo(xp(r.year), yp(r.totalInterest));
+    });
+    ctx.stroke();
+
+    // Legend
+    const lx = pad.left + 12;
+    const ly = pad.top + 14;
+    [[' A — Larger Down Payment', '#3b82f6'], [' B — Rate Buydown', '#8b5cf6']].forEach(([label, color], i) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(lx, ly + i * 18, 18, 3);
+      ctx.fillStyle = '#334155';
+      ctx.font = '12px system-ui';
+      ctx.textAlign = 'left';
+      ctx.fillText(label, lx + 22, ly + 4 + i * 18);
+    });
+  }
+
+  // Sync range inputs
+  ['basedp', 'extra'].forEach(id => {
+    $(id).addEventListener('input', () => { $(`${id}_range`).value = $(id).value; calc(); });
+    $(`${id}_range`).addEventListener('input', () => { $(id).value = $(`${id}_range`).value; calc(); });
+  });
+
+  ['price', 'rate', 'points', 'term', 'rate_per_point'].forEach(id => {
+    $(id).addEventListener('input', calc);
+  });
+
+  // Load saved inputs
+  try {
+    const saved = JSON.parse(localStorage.getItem('hvp_pvd_inputs') || 'null');
+    if (saved) {
+      ['price','basedp','extra','baseRate','points','term','ratePerPoint'].forEach(k => {
+        const elId = k === 'baseRate' ? 'rate' : k === 'ratePerPoint' ? 'rate_per_point' : k;
+        if (saved[k] !== undefined && $(elId)) $(elId).value = saved[k];
+      });
+    }
+  } catch(e) {}
+
+  window.addEventListener('resize', calc);
+  calc();
+</script>
+</body>
+</html>
