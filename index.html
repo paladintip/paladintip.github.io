@@ -53,23 +53,100 @@
       font-weight: 400;
       margin-top: 0.3rem;
     }
+    #status {
+      font-size: 0.85rem;
+      color: #5a6f8a;
+      margin-top: 1rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <h1>Paladin Tip Tools</h1>
-  <nav class="tools">
-    <a class="tool-card" href="break-even.html">
-      Break Even Loan Calculator
-      <span>Find the break-even point for refinancing or loan options</span>
-    </a>
-    <a class="tool-card" href="down-pay-v-rate-buy.html">
-      Down Payment vs. Rate Buydown
-      <span>Compare the benefit of a larger down payment versus buying down your rate</span>
-    </a>
-    <a class="tool-card" href="piti.html">
-      Affordability &amp; PITI Calculator
-      <span>Estimate your monthly principal, interest, taxes, and insurance</span>
-    </a>
-  </nav>
+  <nav class="tools" id="tools"></nav>
+  <p id="status">Loading tools&hellip;</p>
+
+  <script>
+    // Known-file metadata: title + optional description.
+    // Add entries here when you want custom descriptions for new files.
+    const METADATA = {
+      "break-even.html": {
+        title: "Break Even Loan Calculator",
+        desc:  "Find the break-even point for refinancing or loan options"
+      },
+      "down-pay-v-rate-buy.html": {
+        title: "Down Payment vs. Rate Buydown",
+        desc:  "Compare the benefit of a larger down payment versus buying down your rate"
+      },
+      "piti.html": {
+        title: "Affordability & PITI Calculator",
+        desc:  "Estimate your monthly principal, interest, taxes, and insurance"
+      }
+    };
+
+    // Fallback list used when the API is unreachable.
+    const FALLBACK = Object.keys(METADATA);
+
+    // Convert a filename like "my-new-tool.html" → "My New Tool"
+    function fileToTitle(filename) {
+      return filename
+        .replace(/\.html$/i, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function renderCards(files) {
+      const nav = document.getElementById("tools");
+      nav.innerHTML = "";
+      files.forEach(function(filename) {
+        const meta  = METADATA[filename] || {};
+        const title = meta.title || fileToTitle(filename);
+        const desc  = meta.desc  || "";
+
+        const a = document.createElement("a");
+        a.className = "tool-card";
+        a.href = filename;
+        a.textContent = title;
+
+        if (desc) {
+          const s = document.createElement("span");
+          s.textContent = desc;
+          a.appendChild(s);
+        }
+
+        nav.appendChild(a);
+      });
+      document.getElementById("status").style.display = "none";
+    }
+
+    // Fetch the root directory listing via the GitHub Contents API.
+    // This works for any public GitHub Pages repo with no authentication.
+    fetch("https://api.github.com/repos/paladintip/paladintip.github.io/contents/")
+      .then(function(res) {
+        if (!res.ok) { throw new Error("API error " + res.status); }
+        return res.json();
+      })
+      .then(function(items) {
+        var htmlFiles = items
+          .filter(function(item) {
+            return item.type === "file" &&
+                   /\.html$/i.test(item.name) &&
+                   item.name.toLowerCase() !== "index.html";
+          })
+          .map(function(item) { return item.name; })
+          .sort();
+
+        if (htmlFiles.length === 0) {
+          document.getElementById("status").textContent = "No tools found.";
+          return;
+        }
+        renderCards(htmlFiles);
+      })
+      .catch(function() {
+        // API unreachable (offline, rate-limited, etc.) — use static fallback.
+        renderCards(FALLBACK);
+        document.getElementById("status").style.display = "none";
+      });
+  </script>
 </body>
 </html>
