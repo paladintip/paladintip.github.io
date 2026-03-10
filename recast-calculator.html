@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PITI & Recast Mortgage Calculator</title>
+    <style>
+      :root {
+        --primary: #2563eb;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --text: #1e293b;
+        --border: #e2e8f0;
+      }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+      }
+      .container {
+        background: var(--card);
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        max-width: 800px;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+      }
+      @media (max-width: 768px) {
+        .container {
+          grid-template-columns: 1fr;
+        }
+      }
+      h1,
+      h2,
+      h3 {
+        grid-column: 1 / -1;
+        margin-top: 0;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 1rem;
+      }
+      label {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+      }
+      input {
+        padding: 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 1rem;
+      }
+      .section-title {
+        font-size: 1.1rem;
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 0.5rem;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+      }
+      .results {
+        background: var(--bg);
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+      .result-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        font-size: 1.1rem;
+      }
+      .result-row.total {
+        font-weight: bold;
+        font-size: 1.3rem;
+        color: var(--primary);
+        border-top: 1px solid var(--border);
+        padding-top: 0.75rem;
+      }
+      button {
+        grid-column: 1 / -1;
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.75rem;
+        border-radius: 4px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      button:hover {
+        background: #1d4ed8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Mortgage Calculator</h1>
+
+      <form id="mortgage-form" style="display: contents">
+        <!-- Input Section -->
+        <div>
+          <div class="section-title">Loan Details (PITI)</div>
+          <div class="form-group">
+            <label>Home Price ($)</label>
+            <input type="number" name="homePrice" id="homePrice" value="400000" />
+          </div>
+          <div class="form-group">
+            <label>Down Payment ($)</label>
+            <input type="number" name="downPayment" id="downPayment" value="80000" />
+          </div>
+          <div class="form-group">
+            <label>Loan Term (Years)</label>
+            <input type="number" name="loanTerm" id="loanTerm" value="30" />
+          </div>
+          <div class="form-group">
+            <label>Interest Rate (%)</label>
+            <input type="number" step="0.01" name="interestRate" id="interestRate" value="6.5" />
+          </div>
+          <div class="form-group">
+            <label>Property Tax ($/year)</label>
+            <input type="number" name="propertyTax" id="propertyTax" value="4800" />
+          </div>
+          <div class="form-group">
+            <label>Home Insurance ($/year)</label>
+            <input type="number" name="homeInsurance" id="homeInsurance" value="1200" />
+          </div>
+          <div class="form-group">
+            <label>HOA Dues ($/month)</label>
+            <input type="number" name="hoa" id="hoa" value="0" />
+          </div>
+
+          <div class="section-title">Extra Payments & Recast</div>
+          <div class="form-group">
+            <label>Extra Monthly Payment ($)</label>
+            <input type="number" name="extraPayment" id="extraPayment" value="0" />
+          </div>
+          <div class="form-group">
+            <label>Recast Lump Sum ($)</label>
+            <input type="number" name="recastAmount" id="recastAmount" value="0" />
+          </div>
+          <div class="form-group">
+            <label>Recast Month (e.g., 60 for year 5)</label>
+            <input type="number" name="recastMonth" id="recastMonth" value="0" />
+          </div>
+
+          <button type="button" onclick="calculateMortgage()">Calculate</button>
+        </div>
+      </form>
+
+      <!-- Results Section -->
+      <div>
+        <div class="results">
+          <h3>Initial Monthly Payment</h3>
+          <div class="result-row">
+            <span>Principal & Interest:</span>
+            <span id="res-pi">$0.00</span>
+          </div>
+          <div class="result-row">
+            <span>Taxes:</span>
+            <span id="res-tax">$0.00</span>
+          </div>
+          <div class="result-row">
+            <span>Insurance:</span>
+            <span id="res-ins">$0.00</span>
+          </div>
+          <div class="result-row">
+            <span>HOA:</span>
+            <span id="res-hoa">$0.00</span>
+          </div>
+          <div class="result-row total">
+            <span>Total Initial PITI:</span>
+            <span id="res-piti">$0.00</span>
+          </div>
+
+          <h3 style="margin-top: 2rem">Loan Summary</h3>
+          <div class="result-row">
+            <span>Payoff Time:</span>
+            <span id="res-payoff">0 months</span>
+          </div>
+          <div class="result-row">
+            <span>Total Interest Paid:</span>
+            <span id="res-total-interest">$0.00</span>
+          </div>
+
+          <div id="recast-results" style="display: none; margin-top: 2rem">
+            <h3>Post-Recast Details</h3>
+            <div class="result-row">
+              <span>New P&I Payment:</span>
+              <span id="res-recast-pi">$0.00</span>
+            </div>
+            <div class="result-row total">
+              <span>New Total PITI:</span>
+              <span id="res-recast-piti">$0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form State Sync Script -->
+    <script src="form-state-url.js"></script>
+
+    <!-- Calculation Logic -->
+    <script>
+      const formatCurrency = (num) =>
+        new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(num);
+
+      function calcPI(principal, ratePerPeriod, periods) {
+        if (ratePerPeriod === 0) return principal / periods;
+        return (
+          (principal * ratePerPeriod * Math.pow(1 + ratePerPeriod, periods)) /
+          (Math.pow(1 + ratePerPeriod, periods) - 1)
+        );
+      }
+
+      function calculateMortgage() {
+        // Get Inputs
+        const homePrice = parseFloat(document.getElementById('homePrice').value) || 0;
+        const downPayment = parseFloat(document.getElementById('downPayment').value) || 0;
+        const loanTermYears = parseFloat(document.getElementById('loanTerm').value) || 0;
+        const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
+        const propertyTaxYear = parseFloat(document.getElementById('propertyTax').value) || 0;
+        const homeInsuranceYear = parseFloat(document.getElementById('homeInsurance').value) || 0;
+        const hoa = parseFloat(document.getElementById('hoa').value) || 0;
+        
+        const extraPayment = parseFloat(document.getElementById('extraPayment').value) || 0;
+        const recastAmount = parseFloat(document.getElementById('recastAmount').value) || 0;
+        const recastMonth = parseInt(document.getElementById('recastMonth').value) || 0;
+
+        // Base Calculations
+        let principal = homePrice - downPayment;
+        const monthlyRate = interestRate / 100 / 12;
+        const totalMonths = loanTermYears * 12;
+        
+        const monthlyTax = propertyTaxYear / 12;
+        const monthlyIns = homeInsuranceYear / 12;
+        
+        const initialPI = calcPI(principal, monthlyRate, totalMonths);
+        const initialPITI = initialPI + monthlyTax + monthlyIns + hoa;
+
+        // Display Initial Setup
+        document.getElementById('res-pi').innerText = formatCurrency(initialPI);
+        document.getElementById('res-tax').innerText = formatCurrency(monthlyTax);
+        document.getElementById('res-ins').innerText = formatCurrency(monthlyIns);
+        document.getElementById('res-hoa').innerText = formatCurrency(hoa);
+        document.getElementById('res-piti').innerText = formatCurrency(initialPITI);
+
+        // Amortization Loop
+        let balance = principal;
+        let totalInterest = 0;
+        let monthsElapsed = 0;
+        let currentPI = initialPI;
+        let newRecastPI = 0;
+
+        for (let m = 1; m <= totalMonths; m++) {
+          if (balance <= 0) break;
+
+          monthsElapsed++;
+
+          // Apply Recast
+          if (m === recastMonth && recastAmount > 0) {
+            balance -= recastAmount;
+            if (balance < 0) balance = 0;
+            // Recalculate PI for remaining term
+            const remainingMonths = totalMonths - m + 1;
+            currentPI = calcPI(balance, monthlyRate, remainingMonths);
+            newRecastPI = currentPI;
+          }
+
+          let interestForMonth = balance * monthlyRate;
+          totalInterest += interestForMonth;
+
+          let principalForMonth = currentPI - interestForMonth + extraPayment;
+          
+          if (principalForMonth > balance) {
+            principalForMonth = balance;
+          }
+
+          balance -= principalForMonth;
+        }
+
+        // Display Totals
+        const years = Math.floor(monthsElapsed / 12);
+        const months = monthsElapsed % 12;
+        document.getElementById('res-payoff').innerText = `${years} yrs, ${months} mos`;
+        document.getElementById('res-total-interest').innerText = formatCurrency(totalInterest);
+
+        // Display Recast Info if applicable
+        const recastDiv = document.getElementById('recast-results');
+        if (recastAmount > 0 && newRecastPI > 0) {
+          recastDiv.style.display = 'block';
+          document.getElementById('res-recast-pi').innerText = formatCurrency(newRecastPI);
+          document.getElementById('res-recast-piti').innerText = formatCurrency(newRecastPI + monthlyTax + monthlyIns + hoa);
+        } else {
+          recastDiv.style.display = 'none';
+        }
+      }
+
+      // Initial calculation on load
+      window.onload = () => {
+        // Slight delay to allow form-state-url.js to populate fields if needed
+        setTimeout(calculateMortgage, 100);
+      };
+      
+      // Calculate whenever inputs change
+      document.getElementById('mortgage-form').addEventListener('input', calculateMortgage);
+    </script>
+  </body>
+</html>
