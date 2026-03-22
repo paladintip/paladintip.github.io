@@ -220,6 +220,27 @@ body {
 }
 .profile-load-btn:hover { background: rgba(108,142,255,.22); }
 
+.profile-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: .78rem;
+  padding: 3px 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.profile-edit-btn:hover {
+  color: var(--accent);
+  border-color: rgba(108,142,255,.3);
+  background: rgba(108,142,255,.08);
+}
+
 .profile-delete-btn {
   background: none;
   border: 1px solid transparent;

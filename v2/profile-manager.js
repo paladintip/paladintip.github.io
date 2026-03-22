@@ -110,6 +110,7 @@ window.ProfileManager = (function () {
       { key: 'insuranceAnnual', id: 'insurance', transform: v => Math.round(v / 12) },
       { key: 'hoa',             id: 'hoa' },
       { key: 'savings',         id: 'savings' },
+      { key: 'rent',            id: 'rent' },
     ],
     'recast-calculator.html': [
       { key: 'homePrice',       id: 'homePrice' },
@@ -154,6 +155,7 @@ window.ProfileManager = (function () {
       { key: 'insuranceAnnual', id: 'insurance', transform: v => +v * 12 },
       { key: 'hoa',             id: 'hoa' },
       { key: 'savings',         id: 'savings' },
+      { key: 'rent',            id: 'rent' },
     ],
     'recast-calculator.html': [
       { key: 'homePrice',       id: 'homePrice' },

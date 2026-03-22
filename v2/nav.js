@@ -19,7 +19,8 @@
   }
 
   function isCalcPage() {
-    return currentFile() !== 'index.html';
+    const f = currentFile();
+    return f !== 'index.html' && f !== 'profile-edit.html';
   }
 
   function fmtDate(iso) {
@@ -146,6 +147,7 @@
             <div class="profile-item-meta">${meta}</div>
           </div>
           ${isCalc ? `<button class="profile-load-btn" data-load="${p.id}">Load</button>` : ''}
+          <a class="profile-edit-btn" href="profile-edit.html?id=${p.id}" title="Edit profile">✎</a>
           <button class="profile-delete-btn" data-del="${p.id}" title="Delete">✕</button>
         </div>`;
       });

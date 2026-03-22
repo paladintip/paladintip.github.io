@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Profile · Paladin Tip</title>
+  <script src="profile-manager.js"></script>
+  <script src="nav.js"></script>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    /* ── Back link ──────────────────────────────────────────────── */
+    .editor-back {
+      margin-bottom: 6px;
+    }
+    .editor-back a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: .85rem;
+      font-weight: 500;
+      transition: color .15s;
+    }
+    .editor-back a:hover { color: var(--accent); }
+
+    /* ── Field label helpers ────────────────────────────────────── */
+    .field-hint {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: .74rem;
+      margin-left: 3px;
+    }
+    .field-tag {
+      background: rgba(167,139,250,.15);
+      color: var(--accent2);
+      font-size: .64rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    /* ── Profile selector cards ─────────────────────────────────── */
+    .profile-select-card {
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color .15s, background .15s;
+    }
+    .profile-select-card:hover {
+      border-color: var(--accent);
+      background: #1f2336;
+    }
+    .psc-info { flex: 1; min-width: 0; }
+    .psc-name { font-size: .95rem; font-weight: 600; }
+    .psc-meta { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+    .psc-arrow { color: var(--accent); font-size: 1.1rem; margin-left: 12px; flex-shrink: 0; }
+
+    /* ── Custom fields ──────────────────────────────────────────── */
+    .custom-field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    .custom-field-row input { margin-bottom: 0; }
+    .custom-remove-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      font-size: .78rem;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: color .15s, border-color .15s, background .15s;
+    }
+    .custom-remove-btn:hover {
+      color: var(--red);
+      border-color: rgba(239,68,68,.3);
+      background: rgba(239,68,68,.08);
+      opacity: 1;
+    }
+    .custom-add-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      align-items: center;
+    }
+    .custom-add-form input { margin-bottom: 0; }
+    .custom-add-btn {
+      padding: 9px 14px;
+      font-size: .88rem;
+      white-space: nowrap;
+    }
+    .no-custom {
+      font-size: .82rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 10px 0 4px;
+    }
+    @media (max-width: 500px) {
+      .custom-field-row,
+      .custom-add-form { grid-template-columns: 1fr 1fr auto; }
+    }
+
+    /* ── Editor action bar ──────────────────────────────────────── */
+    .editor-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding-bottom: 20px;
+    }
+    .btn-save {
+      padding: 11px 28px;
+      font-size: .95rem;
+    }
+    .btn-danger {
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.28);
+      color: var(--red);
+      padding: 10px 20px;
+      font-size: .88rem;
+    }
+    .btn-danger:hover {
+      background: rgba(239,68,68,.22);
+      opacity: 1;
+    }
+
+    /* ── Empty / not-found states ───────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      font-size: .9rem;
+      padding: 40px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .empty-state a { color: var(--accent); }
+
+    /* ── datalist hint text ─────────────────────────────────────── */
+    .field-sub {
+      font-size: .74rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- ── Profile selector (no ?id param) ──────────────────────── -->
+    <div id="view-select">
+      <div class="page-header">
+        <h1>Edit a Profile</h1>
+        <p>Select a saved profile to edit its fields — or add fields it didn't capture.</p>
+      </div>
+      <div id="select-list" style="display:flex;flex-direction:column;gap:.6rem;"></div>
+      <div id="select-empty" hidden class="empty-state">
+        No saved profiles yet.<br/>
+        Fill out a calculator and save one first, then come back here.
+      </div>
+    </div>
+
+    <!-- ── Edit form (?id=... param) ────────────────────────────── -->
+    <div id="view-edit" hidden>
+
+      <div class="editor-back">
+        <a href="profile-edit.html">← All Profiles</a>
+      </div>
+
+      <div class="page-header" style="text-align:left;margin-bottom:20px;">
+        <h1 id="editor-title">Edit Profile</h1>
+      </div>
+
+      <!-- Profile name -->
+      <div class="card">
+        <div class="card-title">Profile</div>
+        <div class="field">
+          <label for="f-name">Profile Name</label>
+          <input type="text" id="f-name"
+            placeholder="e.g. First-time buyer 7% rate"
+            maxlength="60" autocomplete="off" />
+        </div>
+      </div>
+
+      <!-- Borrower -->
+      <div class="card">
+        <div class="card-title">Borrower</div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f-income">Gross Monthly Income<span class="field-hint">$/mo</span></label>
+            <input type="number" id="f-income" placeholder="not set" min="0" step="100" />
+          </div>
+          <div class="field">
+            <label for="f-debts">Monthly Debt Payments<span class="field-hint">$/mo</span></label>
+            <input type="number" id="f-debts" placeholder="not set" min="0" step="100" />
+          </div>
+          <div class="field">
+            <label for="f-savings">Total Savings<span class="field-hint">$</span></label>
+            <input type="number" id="f-savings" placeholder="not set" min="0" step="1000" />
+          </div>
+          <div class="field">
+            <label for="f-rent">
+              Current Monthly Rent<span class="field-hint">$/mo</span>
+              <span class="field-tag">Break Even</span>
+            </label>
+            <input type="number" id="f-rent" placeholder="not set" min="0" step="100" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Property -->
+      <div class="card">
+        <div class="card-title">Property</div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f-homePrice">Home Price<span class="field-hint">$</span></label>
+            <input type="number" id="f-homePrice" placeholder="not set" min="0" step="5000" />
+          </div>
+          <div class="field">
+            <label for="f-taxRate">Property Tax Rate<span class="field-hint">%/yr</span></label>
+            <input type="number" id="f-taxRate" placeholder="not set" min="0" step="0.01" />
+          </div>
+          <div class="field">
+            <label for="f-insuranceAnnual">Home Insurance<span class="field-hint">$/yr</span></label>
+            <input type="number" id="f-insuranceAnnual" placeholder="not set" min="0" step="100" />
+          </div>
+          <div class="field">
+            <label for="f-hoa">HOA<span class="field-hint">$/mo</span></label>
+            <input type="number" id="f-hoa" placeholder="not set" min="0" step="25" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Loan -->
+      <div class="card">
+        <div class="card-title">Loan</div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f-rate">Interest Rate<span class="field-hint">%/yr</span></label>
+            <input type="number" id="f-rate" placeholder="not set" min="0" max="30" step="0.001" />
+          </div>
+          <div class="field">
+            <label for="f-loanType">Loan Type</label>
+            <select id="f-loanType">
+              <option value="">(not set)</option>
+              <option value="conventional">Conventional</option>
+              <option value="fha">FHA</option>
+              <option value="va">VA</option>
+              <option value="usda">USDA</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-loanTermMonths">Loan Term<span class="field-hint">months</span></label>
+            <input type="number" id="f-loanTermMonths"
+              placeholder="e.g. 360" min="1" step="1"
+              list="term-datalist" />
+            <datalist id="term-datalist">
+              <option value="84">7 yr</option>
+              <option value="180">15 yr</option>
+              <option value="240">20 yr</option>
+              <option value="360">30 yr</option>
+            </datalist>
+            <div class="field-sub">84 = 7yr · 180 = 15yr · 240 = 20yr · 360 = 30yr</div>
+          </div>
+          <div class="field">
+            <label for="f-downPct">Down Payment<span class="field-hint">%</span></label>
+            <input type="number" id="f-downPct" placeholder="not set" min="0" max="100" step="0.1" />
+          </div>
+          <div class="field">
+            <label for="f-downAmt">Down Payment Amount<span class="field-hint">$</span></label>
+            <input type="number" id="f-downAmt" placeholder="not set" min="0" step="1000" />
+          </div>
+          <div class="field">
+            <label for="f-closingPct">Closing Cost<span class="field-hint">% of price</span></label>
+            <input type="number" id="f-closingPct" placeholder="not set" min="0" step="0.1" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom / extra fields -->
+      <div class="card">
+        <div class="card-title">Custom Fields</div>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px;">
+          Store any extra values with this profile — notes, assumptions, or fields
+          specific to your situation.
+        </p>
+        <div id="custom-fields-list"></div>
+        <div class="custom-add-form">
+          <input type="text" id="custom-key" placeholder="Field name" maxlength="40" autocomplete="off" />
+          <input type="text" id="custom-val" placeholder="Value" maxlength="80" autocomplete="off" />
+          <button type="button" class="custom-add-btn" id="custom-add-btn">Add</button>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="editor-actions">
+        <button class="btn-save" id="save-btn">Save Changes</button>
+        <button class="btn-danger" id="delete-btn">Delete Profile</button>
+      </div>
+
+    </div><!-- /view-edit -->
+  </div><!-- /container -->
+
+  <script>
+  (function () {
+    const PM = window.ProfileManager;
+
+    const CATALOG_KEYS = new Set([
+      'id', 'name', 'createdAt',
+      'income', 'debts', 'savings', 'rent',
+      'homePrice', 'taxRate', 'insuranceAnnual', 'hoa',
+      'rate', 'loanType', 'loanTermMonths', 'downPct', 'downAmt', 'closingPct',
+    ]);
+
+    const NUMBER_FIELDS = [
+      'income', 'debts', 'savings', 'rent',
+      'homePrice', 'taxRate', 'insuranceAnnual', 'hoa',
+      'rate', 'loanTermMonths', 'downPct', 'downAmt', 'closingPct',
+    ];
+
+    let currentProfile = null;
+    let customFields = [];
+
+    /* ── Utilities ─────────────────────────────────────────────── */
+
+    function escHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function fmtDate(iso) {
+      try {
+        return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch { return ''; }
+    }
+
+    function showToast(msg, isError) {
+      const existing = document.querySelector('.profile-toast');
+      if (existing) existing.remove();
+      const t = document.createElement('div');
+      t.className = 'profile-toast';
+      const color = isError ? 'var(--red)' : 'var(--green)';
+      t.style.borderColor = color;
+      t.innerHTML = `<span class="toast-dot" style="background:${color}"></span>${escHtml(msg)}`;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    /* ── Profile selector view ─────────────────────────────────── */
+
+    function renderSelector() {
+      const profiles = PM.listProfiles();
+      const list = document.getElementById('select-list');
+      const empty = document.getElementById('select-empty');
+
+      if (profiles.length === 0) {
+        list.style.display = 'none';
+        empty.hidden = false;
+        return;
+      }
+
+      list.style.display = '';
+      empty.hidden = true;
+
+      list.innerHTML = profiles.map(p => {
+        const price = p.homePrice ? `$${Math.round(p.homePrice).toLocaleString()}` : '';
+        const rate  = p.rate      ? `${(+p.rate).toFixed(3)}%` : '';
+        const date  = fmtDate(p.createdAt);
+        const meta  = [price, rate, date].filter(Boolean).join(' · ');
+        return `<a class="profile-select-card" href="profile-edit.html?id=${encodeURIComponent(p.id)}">
+          <div class="psc-info">
+            <div class="psc-name">${escHtml(p.name)}</div>
+            ${meta ? `<div class="psc-meta">${meta}</div>` : ''}
+          </div>
+          <span class="psc-arrow">→</span>
+        </a>`;
+      }).join('');
+    }
+
+    /* ── Editor view ───────────────────────────────────────────── */
+
+    function loadEditor(id) {
+      const profile = PM.loadProfile(id);
+      if (!profile) {
+        location.href = 'profile-edit.html';
+        return;
+      }
+      currentProfile = profile;
+
+      document.getElementById('view-select').hidden = true;
+      document.getElementById('view-edit').hidden = false;
+      document.title = `Edit: ${profile.name} · Paladin Tip`;
+      document.getElementById('editor-title').textContent = `Edit: ${profile.name}`;
+
+      // Populate name
+      document.getElementById('f-name').value = profile.name || '';
+
+      // Populate all catalog number/text inputs
+      NUMBER_FIELDS.forEach(key => {
+        const el = document.getElementById('f-' + key);
+        if (!el) return;
+        const v = profile[key];
+        el.value = (v !== undefined && v !== null) ? v : '';
+      });
+
+      // loanType select
+      const ltEl = document.getElementById('f-loanType');
+      ltEl.value = profile.loanType || '';
+
+      // Collect custom fields (keys not in catalog)
+      customFields = [];
+      Object.keys(profile).forEach(key => {
+        if (!CATALOG_KEYS.has(key)) {
+          customFields.push({ key, val: String(profile[key]) });
+        }
+      });
+      renderCustomFields();
+    }
+
+    function renderCustomFields() {
+      const list = document.getElementById('custom-fields-list');
+
+      if (customFields.length === 0) {
+        list.innerHTML = '<p class="no-custom">No custom fields yet.</p>';
+        return;
+      }
+
+      list.innerHTML = customFields.map((cf, i) => `
+        <div class="custom-field-row" data-idx="${i}">
+          <input type="text" class="cf-key" value="${escHtml(cf.key)}"
+            placeholder="field name" maxlength="40" />
+          <input type="text" class="cf-val" value="${escHtml(cf.val)}"
+            placeholder="value" maxlength="200" />
+          <button type="button" class="custom-remove-btn" data-idx="${i}" title="Remove field">✕</button>
+        </div>
+      `).join('');
+
+      list.querySelectorAll('.cf-key').forEach((el, i) => {
+        el.addEventListener('input', () => { customFields[i].key = el.value; });
+      });
+      list.querySelectorAll('.cf-val').forEach((el, i) => {
+        el.addEventListener('input', () => { customFields[i].val = el.value; });
+      });
+      list.querySelectorAll('.custom-remove-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          customFields.splice(+btn.dataset.idx, 1);
+          renderCustomFields();
+        });
+      });
+    }
+
+    function collectProfile() {
+      const name = document.getElementById('f-name').value.trim();
+      if (!name) return null;
+
+      const updated = {
+        id:        currentProfile.id,
+        name,
+        createdAt: currentProfile.createdAt,
+      };
+
+      NUMBER_FIELDS.forEach(key => {
+        const el = document.getElementById('f-' + key);
+        if (!el) return;
+        const v = el.value.trim();
+        if (v !== '') updated[key] = +v;
+      });
+
+      const lt = document.getElementById('f-loanType').value;
+      if (lt) updated.loanType = lt;
+
+      customFields.forEach(({ key, val }) => {
+        const k = (key || '').trim();
+        const v = (val || '').trim();
+        if (!k || !v) return;
+        if (CATALOG_KEYS.has(k)) return; // guard: don't shadow catalog fields
+        updated[k] = isNaN(+v) || v === '' ? v : +v;
+      });
+
+      return updated;
+    }
+
+    /* ── Event wiring ──────────────────────────────────────────── */
+
+    document.getElementById('save-btn').addEventListener('click', () => {
+      const nameEl = document.getElementById('f-name');
+      if (!nameEl.value.trim()) {
+        nameEl.focus();
+        nameEl.style.borderColor = 'var(--red)';
+        setTimeout(() => (nameEl.style.borderColor = ''), 1200);
+        return;
+      }
+      const profile = collectProfile();
+      if (!profile) return;
+      PM.saveProfile(profile);
+      currentProfile = profile;
+      document.title = `Edit: ${profile.name} · Paladin Tip`;
+      document.getElementById('editor-title').textContent = `Edit: ${profile.name}`;
+      showToast(`Profile "${profile.name}" saved`);
+    });
+
+    document.getElementById('delete-btn').addEventListener('click', () => {
+      if (!currentProfile) return;
+      if (!confirm(`Delete profile "${currentProfile.name}"? This cannot be undone.`)) return;
+      PM.deleteProfile(currentProfile.id);
+      location.href = 'profile-edit.html';
+    });
+
+    document.getElementById('custom-add-btn').addEventListener('click', addCustomField);
+
+    function addCustomField() {
+      const keyEl = document.getElementById('custom-key');
+      const valEl = document.getElementById('custom-val');
+      const key = keyEl.value.trim();
+      const val = valEl.value.trim();
+
+      if (!key) {
+        keyEl.focus();
+        keyEl.style.borderColor = 'var(--red)';
+        setTimeout(() => (keyEl.style.borderColor = ''), 1200);
+        return;
+      }
+      if (CATALOG_KEYS.has(key)) {
+        alert(`"${key}" is a standard profile field — edit it in the section above.`);
+        keyEl.focus();
+        return;
+      }
+
+      customFields.push({ key, val });
+      keyEl.value = '';
+      valEl.value = '';
+      keyEl.focus();
+      renderCustomFields();
+    }
+
+    document.getElementById('custom-key').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('custom-val').focus();
+    });
+    document.getElementById('custom-val').addEventListener('keydown', e => {
+      if (e.key === 'Enter') addCustomField();
+    });
+
+    /* ── Init ──────────────────────────────────────────────────── */
+
+    const params = new URLSearchParams(location.search);
+    const profileId = params.get('id');
+
+    if (profileId) {
+      loadEditor(profileId);
+    } else {
+      renderSelector();
+    }
+
+  })();
+  </script>
+</body>
+</html>
