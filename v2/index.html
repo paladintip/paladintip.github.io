@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paladin Tip Tools</title>
+  <script src="profile-manager.js"></script>
+  <script src="nav.js"></script>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-bottom: 60px;
+    }
+    .tools-header {
+      text-align: center;
+      margin-bottom: 36px;
+      max-width: 520px;
+    }
+    .tools-header h1 {
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .tools-header p { color: var(--muted); font-size: .9rem; }
+    .tools-grid {
+      display: flex;
+      flex-direction: column;
+      gap: .85rem;
+      width: 100%;
+      max-width: 520px;
+    }
+    a.tool-card {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 600;
+      box-shadow: var(--shadow);
+      transition: border-color .15s, background .15s;
+    }
+    a.tool-card:hover {
+      border-color: var(--accent);
+      background: #1f2336;
+    }
+    a.tool-card span {
+      display: block;
+      font-size: .82rem;
+      color: var(--muted);
+      font-weight: 400;
+      margin-top: .3rem;
+    }
+    a.tool-card .tool-arrow {
+      float: right;
+      color: var(--accent);
+      font-size: 1.1rem;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="tools-header">
+    <h1>Paladin Tip Tools</h1>
+    <p>Free, offline-capable mortgage &amp; financial calculators. No data sent anywhere.</p>
+  </div>
+  <nav class="tools-grid">
+    <a class="tool-card" href="piti.html">
+      <span class="tool-arrow">→</span>
+      Affordability &amp; PITI Calculator
+      <span>Estimate your monthly principal, interest, taxes, and insurance</span>
+    </a>
+    <a class="tool-card" href="break-even.html">
+      <span class="tool-arrow">→</span>
+      Break Even Loan Calculator
+      <span>Find the loan amount where your monthly PITI equals your rent</span>
+    </a>
+    <a class="tool-card" href="recast-calculator.html">
+      <span class="tool-arrow">→</span>
+      PITI &amp; Recast Mortgage Calculator
+      <span>Model a mortgage recast with lump sum payments and extra monthly payments</span>
+    </a>
+    <a class="tool-card" href="down-pay-v-rate-buy.html">
+      <span class="tool-arrow">→</span>
+      Down Payment vs. Rate Buydown
+      <span>Compare the benefit of a larger down payment versus buying down your rate</span>
+    </a>
+  </nav>
+</body>
+</html>

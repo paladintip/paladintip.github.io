@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Break Even Loan Calculator</title>
+  <script src="profile-manager.js"></script>
+  <script src="nav.js"></script>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    /* ── Input with prefix / suffix ─────────────────────────── */
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .prefix, .suffix {
+      position: absolute;
+      font-size: .85rem;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .prefix { left: .75rem; }
+    .suffix { right: .75rem; }
+    .has-prefix input { padding-left: 1.75rem; }
+    .has-suffix input { padding-right: 2rem; }
+
+    /* ── Hero result ─────────────────────────────────────────── */
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .25rem;
+      padding: 1.25rem 0 .5rem;
+    }
+    .hero-label {
+      font-size: .8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+    }
+    .hero-value {
+      font-size: 2.6rem;
+      font-weight: 800;
+      color: var(--accent2);
+      line-height: 1;
+    }
+    .hero-sub {
+      font-size: .85rem;
+      color: var(--muted);
+      margin-top: .25rem;
+    }
+
+    /* ── PITI bar ────────────────────────────────────────────── */
+    .piti-bar {
+      display: flex;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: .75rem;
+    }
+    .piti-bar div { transition: width .3s; }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .75rem;
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    .legend-item { display: flex; align-items: center; gap: .35rem; }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ── Table overrides ─────────────────────────────────────── */
+    .highlight td {
+      color: var(--text);
+      font-weight: 600;
+      background: var(--surface2);
+    }
+    .tag {
+      display: inline-block;
+      font-size: .7rem;
+      padding: .15rem .5rem;
+      border-radius: 999px;
+      font-weight: 600;
+      margin-left: .4rem;
+    }
+    .tag-green { background: rgba(34,197,94,.15);  color: var(--green); }
+    .tag-red   { background: rgba(239,68,68,.15);  color: var(--red);   }
+    .tag-yellow{ background: rgba(234,179,8,.15);  color: var(--yellow);}
+
+    .note {
+      font-size: .78rem;
+      color: var(--muted);
+      line-height: 1.6;
+      padding-top: .5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Results reveal ─────────────────────────────────────── */
+    .results { display: none; flex-direction: column; gap: 1.5rem; }
+    .results.visible { display: flex; }
+
+    /* ── Calculate button ───────────────────────────────────── */
+    button.calc-btn {
+      width: 100%;
+      padding: .85rem;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div>
+      <h1>Break Even Loan Calculator</h1>
+      <p class="subtitle">
+        Find the loan amount where your monthly PITI equals your rent
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Loan & Rate</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Interest Rate</label>
+          <div class="input-wrap has-suffix">
+            <input type="number" id="rate" value="4.9" step="0.1" min="0" />
+            <span class="suffix">%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Loan Term</label>
+          <div class="input-wrap has-suffix">
+            <input type="number" id="term" value="30" step="1" min="1" />
+            <span class="suffix">yr</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Down Payment</label>
+          <div class="input-wrap has-suffix">
+            <input type="number" id="down" value="20" step="1" min="0" max="99" />
+            <span class="suffix">%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Closing Costs</label>
+          <div class="input-wrap has-suffix">
+            <input type="number" id="closing" value="3" step="0.1" min="0" />
+            <span class="suffix">%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Monthly Expenses</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Property Tax Rate</label>
+          <div class="input-wrap has-suffix">
+            <input type="number" id="taxRate" value="1.25" step="0.05" min="0" />
+            <span class="suffix">%/yr</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Home Insurance</label>
+          <div class="input-wrap has-prefix">
+            <span class="prefix">$</span>
+            <input type="number" id="insurance" value="100" step="10" min="0" />
+          </div>
+        </div>
+        <div class="field">
+          <label>HOA</label>
+          <div class="input-wrap has-prefix">
+            <span class="prefix">$</span>
+            <input type="number" id="hoa" value="0" step="10" min="0" />
+          </div>
+        </div>
+        <div class="field">
+          <label>PMI Rate (if &lt;20% down)</label>
+          <div class="input-wrap has-suffix">
+            <input type="number" id="pmi" value="0.5" step="0.05" min="0" />
+            <span class="suffix">%/yr</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Your Rent Target</h2>
+      <div class="grid">
+        <div class="field">
+          <label>Current Monthly Rent</label>
+          <div class="input-wrap has-prefix">
+            <span class="prefix">$</span>
+            <input type="number" id="rent" value="2000" step="50" min="0" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Your Savings</label>
+          <div class="input-wrap has-prefix">
+            <span class="prefix">$</span>
+            <input type="number" id="savings" value="112000" step="1000" min="0" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="calc-btn" onclick="calculate()">Calculate Break Even</button>
+
+    <div class="results" id="results">
+      <div class="card">
+        <div class="hero">
+          <span class="hero-label">Break Even Loan Amount</span>
+          <span class="hero-value" id="heroLoan">—</span>
+          <span class="hero-sub" id="heroSub">—</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>PITI Breakdown</h2>
+        <div class="piti-bar" id="pitiBar"></div>
+        <div class="legend" id="pitiLegend"></div>
+        <br />
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Monthly</th>
+            </tr>
+          </thead>
+          <tbody id="pitiTable"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Home Price Scenarios</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Down %</th>
+              <th>Home Price</th>
+              <th>Down Payment</th>
+              <th>Cash to Close</th>
+            </tr>
+          </thead>
+          <tbody id="scenarioTable"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Cash Position</h2>
+        <table>
+          <tbody id="cashTable"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <p class="note" id="noteText"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fmt(n) {
+      return "$" + Math.round(n).toLocaleString();
+    }
+
+    function fmtPct(n) {
+      return n.toFixed(2) + "%";
+    }
+
+    function calcPI(loan, annualRate, termYears) {
+      const r = annualRate / 100 / 12;
+      const n = termYears * 12;
+      if (r === 0) return loan / n;
+      return (loan * (r * Math.pow(1 + r, n))) / (Math.pow(1 + r, n) - 1);
+    }
+
+    // Given target P&I, solve for loan amount
+    function loanFromPI(targetPI, annualRate, termYears) {
+      const r = annualRate / 100 / 12;
+      const n = termYears * 12;
+      if (r === 0) return targetPI * n;
+      return (targetPI * (Math.pow(1 + r, n) - 1)) / (r * Math.pow(1 + r, n));
+    }
+
+    function calculate() {
+      const rate = parseFloat(document.getElementById("rate").value);
+      const term = parseFloat(document.getElementById("term").value);
+      const downPct = parseFloat(document.getElementById("down").value) / 100;
+      const closingPct = parseFloat(document.getElementById("closing").value) / 100;
+      const taxRate = parseFloat(document.getElementById("taxRate").value) / 100;
+      const insurance = parseFloat(document.getElementById("insurance").value);
+      const hoa = parseFloat(document.getElementById("hoa").value);
+      const pmiRate = parseFloat(document.getElementById("pmi").value) / 100;
+      const rent = parseFloat(document.getElementById("rent").value);
+      const userSavings = parseFloat(document.getElementById("savings").value);
+
+      // Fixed monthly costs not dependent on loan
+      const fixedMonthly = insurance + hoa;
+
+      // We need to solve for loan amount L such that:
+      // PI(L) + taxRate*homePrice/12 + fixedMonthly + PMI(L) = rent
+      // homePrice = L / (1 - downPct)
+      // PMI applies if downPct < 0.20
+
+      // Tax per month = taxRate * homePrice / 12 = taxRate * L / ((1-downPct)*12)
+      // PMI per month = pmiRate * L / 12  (if downPct < 0.20)
+
+      // PI(L) = L * piFactor
+      const r = rate / 100 / 12;
+      const n = term * 12;
+      const piFactor =
+        r === 0 ? 1 / n : (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+
+      const taxFactor = taxRate / ((1 - downPct) * 12);
+      const pmiFactor = downPct < 0.2 ? pmiRate / 12 : 0;
+
+      // rent = L * (piFactor + taxFactor + pmiFactor) + fixedMonthly
+      const totalLoanFactor = piFactor + taxFactor + pmiFactor;
+      const targetForLoan = rent - fixedMonthly;
+
+      if (targetForLoan <= 0) {
+        alert(
+          "Your fixed monthly costs (insurance + HOA) already exceed or equal rent. No loan possible."
+        );
+        return;
+      }
+
+      const loan = targetForLoan / totalLoanFactor;
+      const homePrice = loan / (1 - downPct);
+
+      const piPayment = loan * piFactor;
+      const taxPayment = (homePrice * taxRate) / 12;
+      const pmiPayment = pmiFactor * loan;
+      const total = piPayment + taxPayment + insurance + hoa + pmiPayment;
+
+      const downPayment = homePrice * downPct;
+      const closingCosts = homePrice * closingPct;
+      const cashToClose = downPayment + closingCosts;
+      const cashAfter = userSavings - cashToClose;
+
+      // Scenarios table: 5%, 10%, 15%, 20%, 25%
+      const downOptions = [0.05, 0.1, 0.15, 0.2, 0.25];
+
+      // Render hero
+      document.getElementById("heroLoan").textContent = fmt(loan);
+      document.getElementById("heroSub").textContent =
+        `Home price: ${fmt(homePrice)} · ${fmtPct(downPct * 100)} down · ${fmtPct(rate)} / ${term}yr`;
+
+      // PITI bar
+      const colors = {
+        "Principal & Interest": "#6366f1",
+        "Property Tax": "#22d3ee",
+        "Home Insurance": "#34d399",
+        PMI: "#f59e0b",
+        HOA: "#a78bfa",
+      };
+
+      const components = [
+        { label: "Principal & Interest", value: piPayment },
+        { label: "Property Tax", value: taxPayment },
+        { label: "Home Insurance", value: insurance },
+        ...(pmiPayment > 0 ? [{ label: "PMI", value: pmiPayment }] : []),
+        ...(hoa > 0 ? [{ label: "HOA", value: hoa }] : []),
+      ];
+
+      const bar = document.getElementById("pitiBar");
+      bar.innerHTML = components
+        .map(
+          (c) =>
+            `<div style="width:${((c.value / total) * 100).toFixed(1)}%;background:${colors[c.label]}"></div>`
+        )
+        .join("");
+
+      const legend = document.getElementById("pitiLegend");
+      legend.innerHTML = components
+        .map(
+          (c) =>
+            `<div class="legend-item"><div class="dot" style="background:${colors[c.label]}"></div>${c.label}</div>`
+        )
+        .join("");
+
+      // PITI table
+      const pitiBody = document.getElementById("pitiTable");
+      pitiBody.innerHTML =
+        components
+          .map(
+            (c) =>
+              `<tr><td>${c.label}</td><td>${fmt(c.value)}</td></tr>`
+          )
+          .join("") +
+        `<tr class="highlight"><td>Total Monthly</td><td>${fmt(total)}</td></tr>`;
+
+      // Scenarios
+      const scenBody = document.getElementById("scenarioTable");
+      scenBody.innerHTML = downOptions
+        .map((d) => {
+          const hp = loan / (1 - d);
+          const dp = hp * d;
+          const cc = hp * closingPct;
+          const ctc = dp + cc;
+          const isSelected = Math.abs(d - downPct) < 0.001;
+          return `<tr class="${isSelected ? "highlight" : ""}">
+          <td>${(d * 100).toFixed(0)}%${isSelected ? ' <span class="tag tag-green">selected</span>' : ""}</td>
+          <td>${fmt(hp)}</td>
+          <td>${fmt(dp)}</td>
+          <td>${fmt(ctc)}</td>
+        </tr>`;
+        })
+        .join("");
+
+      // Cash
+      const cashBody = document.getElementById("cashTable");
+      const cashTag =
+        cashAfter >= 0
+          ? `<span class="tag tag-green">+${fmt(cashAfter)} left</span>`
+          : `<span class="tag tag-red">${fmt(Math.abs(cashAfter))} short</span>`;
+
+      cashBody.innerHTML = `
+        <tr><td>Your Savings</td><td>${fmt(userSavings)}</td></tr>
+        <tr><td>Down Payment</td><td>−${fmt(downPayment)}</td></tr>
+        <tr><td>Closing Costs (est.)</td><td>−${fmt(closingCosts)}</td></tr>
+        <tr><td>Cash to Close</td><td>${fmt(cashToClose)}</td></tr>
+        <tr class="highlight"><td>Cash After Close</td><td>${cashTag}</td></tr>
+      `;
+
+      // Note
+      const pmiNote =
+        downPct < 0.2
+          ? `PMI of ${fmtPct(pmiRate * 100)}/yr is included because your down payment is below 20%.`
+          : `No PMI — your down payment is ≥20%.`;
+
+      document.getElementById("noteText").textContent =
+        `This loan amount (${fmt(loan)}) produces a total PITI of ${fmt(total)}/mo, matching your ${fmt(rent)}/mo rent target. ` +
+        `The corresponding home price is ${fmt(homePrice)} at ${(downPct * 100).toFixed(0)}% down. ` +
+        pmiNote;
+
+      document.getElementById("results").classList.add("visible");
+      document.getElementById("results").scrollIntoView({ behavior: "smooth" });
+    }
+  </script>
+  <script src="form-state-url.js"></script>
+</body>
+</html>

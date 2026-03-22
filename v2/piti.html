@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Affordability & PITI Calculator</title>
+  <script src="profile-manager.js"></script>
+  <script src="nav.js"></script>
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    /* ── Slider + number pair ───────────────────────────────── */
+    .slider-pair {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .slider-pair input[type="number"] { width: 120px; }
+
+    /* ── PITI Breakdown ─────────────────────────────────────── */
+    .piti-breakdown {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 18px;
+    }
+    .piti-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      font-size: .9rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .piti-row:last-child { border-bottom: none; }
+    .piti-row .piti-label { color: var(--muted); }
+    .piti-row .piti-val   { font-weight: 600; }
+    .piti-row.total .piti-label,
+    .piti-row.total .piti-val {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .piti-bar-wrap {
+      display: flex;
+      gap: 3px;
+      height: 8px;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .piti-seg { height: 100%; transition: width .3s; }
+    .seg-p  { background: #6c8eff; }
+    .seg-i  { background: #a78bfa; }
+    .seg-t  { background: #22c55e; }
+    .seg-ins{ background: #f59e0b; }
+    .seg-pmi{ background: #ef4444; }
+    .piti-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: .72rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    /* ── DTI Bars ───────────────────────────────────────────── */
+    .dti-section { margin-bottom: 16px; }
+    .dti-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+    .dti-label { font-size: .8rem; font-weight: 700; color: var(--muted); }
+    .dti-value { font-size: 1rem; font-weight: 700; }
+    .dti-track {
+      height: 10px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .dti-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .35s, background .35s;
+    }
+    .dti-explain { font-size: .73rem; color: var(--muted); margin-top: 3px; }
+    .dti-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: .65rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── PMI Badge ──────────────────────────────────────────── */
+    .pmi-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .8rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 99px;
+      margin-bottom: 16px;
+    }
+    .pmi-badge.active { background: rgba(239,68,68,.15); color: var(--red);   border: 1px solid rgba(239,68,68,.4); }
+    .pmi-badge.none   { background: rgba(34,197,94,.15); color: var(--green); border: 1px solid rgba(34,197,94,.4); }
+
+    /* ── Cash to Close table ────────────────────────────────── */
+    .cash-table { width: 100%; font-size: .88rem; }
+    .cash-table tr td { padding: 4px 0; border-bottom: none; }
+    .cash-table tr td:last-child { text-align: right; font-weight: 600; }
+    .cash-table .ct-total td { color: var(--accent); font-weight: 700; border-top: 1px solid var(--border); padding-top: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Affordability &amp; PITI Calculator</h1>
+  <p>Live estimates · No data sent anywhere · Pure JS</p>
+</div>
+
+<div class="layout">
+  <!-- ── LEFT COLUMN: INPUTS ─────────────────────────────── -->
+  <div class="col">
+
+    <!-- Home Price & Rate -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Property & Loan
+      </div>
+
+      <div class="field">
+        <label>Home Price</label>
+        <div class="slider-pair">
+          <input type="range" id="price-slider" min="50000" max="2000000" step="5000" value="450000" />
+          <input type="number" id="price-input" min="0" step="1000" value="450000" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Interest Rate (%)</label>
+        <div class="slider-pair">
+          <input type="range" id="rate-slider" min="1" max="15" step="0.125" value="7.0" />
+          <input type="number" id="rate-input" min="0.1" max="30" step="0.125" value="7.0" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Loan Type</label>
+          <select id="loan-type">
+            <option value="conventional">Conventional</option>
+            <option value="fha">FHA</option>
+            <option value="va">VA</option>
+            <option value="usda">USDA</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Loan Term</label>
+          <select id="loan-term">
+            <option value="360">30-year fixed</option>
+            <option value="180">15-year fixed</option>
+            <option value="240">20-year fixed</option>
+            <option value="84">7-year ARM</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Down Payment (%)</label>
+          <input type="number" id="down-pct" min="0" max="100" step="0.5" value="10" />
+        </div>
+        <div class="field">
+          <label>Down Payment ($)</label>
+          <input type="number" id="down-amt" min="0" step="1000" value="45000" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Expenses -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+        Monthly Expenses
+      </div>
+
+      <div class="grid-3">
+        <div class="field">
+          <label>Property Tax (%/yr)</label>
+          <input type="number" id="tax-rate" min="0" max="5" step="0.01" value="1.2" />
+        </div>
+        <div class="field">
+          <label>Home Insurance ($/yr)</label>
+          <input type="number" id="insurance" min="0" step="100" value="1800" />
+        </div>
+        <div class="field">
+          <label>HOA ($/mo)</label>
+          <input type="number" id="hoa" min="0" step="25" value="0" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Income & Debts -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="2"/>
+        </svg>
+        Income &amp; Debts
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Gross Monthly Income ($)</label>
+          <input type="number" id="income" min="0" step="500" value="8500" />
+        </div>
+        <div class="field">
+          <label>Monthly Debt Payments ($)</label>
+          <input type="number" id="debts" min="0" step="50" value="450" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Assumptions -->
+    <details>
+      <summary>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Assumptions &amp; Editable Defaults
+        <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </summary>
+      <div class="assumption-body">
+        <div class="grid-2">
+          <div class="field">
+            <label>Conventional PMI (%/yr of loan)</label>
+            <input type="number" id="conv-pmi" min="0" max="5" step="0.01" value="0.85" />
+          </div>
+          <div class="field">
+            <label>FHA MIP (%/yr of loan)</label>
+            <input type="number" id="fha-mip" min="0" max="5" step="0.01" value="0.55" />
+          </div>
+          <div class="field">
+            <label>FHA Upfront MIP (%)</label>
+            <input type="number" id="fha-ufmip" min="0" max="5" step="0.01" value="1.75" />
+          </div>
+          <div class="field">
+            <label>USDA Guarantee Fee (%/yr)</label>
+            <input type="number" id="usda-fee" min="0" max="5" step="0.01" value="0.35" />
+          </div>
+          <div class="field">
+            <label>VA Funding Fee (%)</label>
+            <input type="number" id="va-fee" min="0" max="5" step="0.01" value="2.15" />
+          </div>
+          <div class="field">
+            <label>Closing Cost (%)</label>
+            <input type="number" id="closing-pct" min="0" max="10" step="0.1" value="3" />
+          </div>
+        </div>
+        <p style="font-size:.74rem;color:var(--muted);margin-top:8px;">
+          PMI applies to Conventional loans with &lt;20% down. FHA MIP applies regardless of down payment (with current LTV &gt; 90%). VA and USDA have no monthly mortgage insurance; upfront fees rolled in.
+        </p>
+      </div>
+    </details>
+
+  </div><!-- /left col -->
+
+  <!-- ── RIGHT COLUMN: OUTPUTS ───────────────────────────── -->
+  <div class="col">
+
+    <!-- Key Numbers -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        Key Numbers
+      </div>
+
+      <div class="results-grid">
+        <div class="result-box">
+          <div class="label">Loan Amount</div>
+          <div class="value accent" id="out-loan">—</div>
+          <div class="sub" id="out-ltv">LTV: —</div>
+        </div>
+        <div class="result-box">
+          <div class="label">Total Monthly PITI</div>
+          <div class="value accent" id="out-piti">—</div>
+          <div class="sub" id="out-piti-sub">incl. PMI &amp; HOA</div>
+        </div>
+        <div class="result-box">
+          <div class="label">Cash to Close</div>
+          <div class="value" id="out-ctc">—</div>
+          <div class="sub">Down + Closing Costs</div>
+        </div>
+        <div class="result-box">
+          <div class="label">Cash After Close</div>
+          <div class="value" id="out-remaining">—</div>
+          <div class="sub" id="out-savings-sub">Based on savings</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PITI Breakdown -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+        PITI Breakdown
+      </div>
+
+      <div class="piti-bar-wrap" id="piti-bar">
+        <div class="piti-seg seg-p" id="bar-p" style="width:0%"></div>
+        <div class="piti-seg seg-i" id="bar-i" style="width:0%"></div>
+        <div class="piti-seg seg-t" id="bar-t" style="width:0%"></div>
+        <div class="piti-seg seg-ins" id="bar-ins" style="width:0%"></div>
+        <div class="piti-seg seg-pmi" id="bar-pmi" style="width:0%"></div>
+      </div>
+
+      <div class="piti-legend">
+        <span><span class="legend-dot" style="background:#6c8eff"></span>Principal</span>
+        <span><span class="legend-dot" style="background:#a78bfa"></span>Interest</span>
+        <span><span class="legend-dot" style="background:#22c55e"></span>Tax</span>
+        <span><span class="legend-dot" style="background:#f59e0b"></span>Insurance</span>
+        <span><span class="legend-dot" style="background:#ef4444"></span>PMI/MIP</span>
+      </div>
+
+      <!-- PMI Badge -->
+      <div id="pmi-badge" class="pmi-badge none">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        No PMI / MIP
+      </div>
+
+      <div class="piti-breakdown">
+        <div class="piti-row">
+          <span class="piti-label">Principal</span>
+          <span class="piti-val" id="out-principal">—</span>
+        </div>
+        <div class="piti-row">
+          <span class="piti-label">Interest</span>
+          <span class="piti-val" id="out-interest">—</span>
+        </div>
+        <div class="piti-row">
+          <span class="piti-label">Property Tax</span>
+          <span class="piti-val" id="out-tax">—</span>
+        </div>
+        <div class="piti-row">
+          <span class="piti-label">Homeowner's Insurance</span>
+          <span class="piti-val" id="out-insurance">—</span>
+        </div>
+        <div class="piti-row">
+          <span class="piti-label" id="pmi-label">PMI / MIP</span>
+          <span class="piti-val" id="out-pmi">—</span>
+        </div>
+        <div class="piti-row">
+          <span class="piti-label">HOA</span>
+          <span class="piti-val" id="out-hoa">—</span>
+        </div>
+        <div class="piti-row total">
+          <span class="piti-label">Total Monthly</span>
+          <span class="piti-val" id="out-total-monthly">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DTI -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>
+        </svg>
+        Debt-to-Income Ratios
+      </div>
+
+      <div class="dti-section">
+        <div class="dti-header">
+          <span class="dti-label">Front-End DTI <span class="chip">Housing Only</span></span>
+          <span class="dti-value" id="out-fedti">—</span>
+        </div>
+        <div class="dti-track">
+          <div class="dti-fill" id="fill-fedti" style="width:0%"></div>
+        </div>
+        <div class="dti-ticks">
+          <span>0%</span><span>28%</span><span>36%</span><span>50%</span><span>60%+</span>
+        </div>
+        <div class="dti-explain" id="explain-fedti"></div>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="dti-section">
+        <div class="dti-header">
+          <span class="dti-label">Back-End DTI <span class="chip">All Debts</span></span>
+          <span class="dti-value" id="out-bedti">—</span>
+        </div>
+        <div class="dti-track">
+          <div class="dti-fill" id="fill-bedti" style="width:0%"></div>
+        </div>
+        <div class="dti-ticks">
+          <span>0%</span><span>36%</span><span>43%</span><span>50%</span><span>60%+</span>
+        </div>
+        <div class="dti-explain" id="explain-bedti"></div>
+      </div>
+    </div>
+
+    <!-- Cash to Close Detail -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+        </svg>
+        Cash to Close
+      </div>
+
+      <table class="cash-table">
+        <tbody>
+          <tr>
+            <td style="color:var(--muted)">Down Payment</td>
+            <td id="ctc-down">—</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted)">Closing Costs (est.)</td>
+            <td id="ctc-closing">—</td>
+          </tr>
+          <tr id="ctc-upfront-row">
+            <td style="color:var(--muted)" id="ctc-upfront-label">Upfront Fee</td>
+            <td id="ctc-upfront">—</td>
+          </tr>
+          <tr class="ct-total">
+            <td>Total Cash Needed</td>
+            <td id="ctc-total">—</td>
+          </tr>
+          <tr>
+            <td style="color:var(--muted)">Your Savings</td>
+            <td>
+              <input
+                type="number"
+                id="savings"
+                min="0"
+                step="1000"
+                value="80000"
+                style="width:110px;text-align:right;padding:4px 8px;font-size:.88rem;"
+              />
+            </td>
+          </tr>
+          <tr class="ct-total">
+            <td id="remaining-label">Cash After Close</td>
+            <td id="ctc-remaining" style="font-size:1.05rem">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /right col -->
+</div><!-- /layout -->
+
+<script>
+  /* ════════════════════════════════════════════════════
+     UTILITIES
+  ════════════════════════════════════════════════════ */
+  const $ = id => document.getElementById(id);
+  const fmt = (n, decimals = 0) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: decimals,
+      minimumFractionDigits: decimals,
+    }).format(n);
+
+  const pct = n => n.toFixed(1) + '%';
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  /* ════════════════════════════════════════════════════
+     PURE MATH FUNCTIONS
+  ════════════════════════════════════════════════════ */
+
+  /**
+   * Monthly mortgage payment (principal + interest)
+   * @param {number} principal  - loan amount
+   * @param {number} annualRate - annual interest rate as percent (e.g. 7.0)
+   * @param {number} months     - loan term in months
+   */
+  function calcPI(principal, annualRate, months) {
+    if (annualRate === 0) return principal / months;
+    const r = annualRate / 100 / 12;
+    return principal * (r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
+  }
+
+  /**
+   * Split a full P&I payment into principal and interest portions
+   * for the very first payment.
+   */
+  function calcFirstPrincipal(principal, annualRate, months) {
+    const r = annualRate / 100 / 12;
+    const interestPortion = principal * r;
+    const piPayment = calcPI(principal, annualRate, months);
+    return {
+      interest: interestPortion,
+      principal: piPayment - interestPortion,
+    };
+  }
+
+  /** LTV as a ratio (0–1) */
+  function calcLTV(price, downAmt) {
+    if (price === 0) return 0;
+    return (price - downAmt) / price;
+  }
+
+  /**
+   * Monthly PMI/MIP amount.
+   * Returns { monthly, label, upfrontFee }
+   */
+  function calcMortgageInsurance(loanType, loanAmount, price, downAmt, assumptions) {
+    const ltv = calcLTV(price, downAmt);
+    const downPct = 1 - ltv;
+
+    switch (loanType) {
+      case 'conventional': {
+        if (ltv <= 0.80) return { monthly: 0, label: 'PMI', upfront: 0, active: false };
+        const annual = (loanAmount * assumptions.convPMI) / 100;
+        return { monthly: annual / 12, label: 'PMI', upfront: 0, active: true };
+      }
+      case 'fha': {
+        // FHA MIP always applies (for terms >15yr and base loan > threshold)
+        const annual = (loanAmount * assumptions.fhaMIP) / 100;
+        const upfront = loanAmount * (assumptions.fhaUFMIP / 100);
+        return { monthly: annual / 12, label: 'FHA MIP', upfront, active: true };
+      }
+      case 'va': {
+        const upfront = loanAmount * (assumptions.vaFee / 100);
+        return { monthly: 0, label: 'VA Funding Fee', upfront, active: false };
+      }
+      case 'usda': {
+        const annual = (loanAmount * assumptions.usdaFee) / 100;
+        return { monthly: annual / 12, label: 'USDA Fee', upfront: 0, active: true };
+      }
+      default:
+        return { monthly: 0, label: 'PMI', upfront: 0, active: false };
+    }
+  }
+
+  /** DTI color + explanation */
+  function dtiStatus(ratio, isFront) {
+    const greenThreshold  = isFront ? 0.28 : 0.36;
+    const yellowThreshold = isFront ? 0.36 : 0.43;
+
+    if (ratio <= greenThreshold) {
+      return {
+        color: '#22c55e',
+        explanation: isFront
+          ? 'Excellent — well within conventional guidelines (≤28%).'
+          : 'Excellent — below the QM safe-harbor limit (≤36%).',
+      };
+    } else if (ratio <= yellowThreshold) {
+      return {
+        color: '#eab308',
+        explanation: isFront
+          ? 'Acceptable — some lenders allow up to 36% front-end DTI.'
+          : 'Caution — approaching conventional 43% back-end limit.',
+      };
+    } else if (ratio <= 0.50) {
+      return {
+        color: '#f97316',
+        explanation: isFront
+          ? 'High — may require compensating factors (strong credit, reserves).'
+          : 'High — FHA allows up to 50% with compensating factors.',
+      };
+    } else {
+      return {
+        color: '#ef4444',
+        explanation: 'Very high — likely ineligible for most conforming loan programs.',
+      };
+    }
+  }
+
+  /* ════════════════════════════════════════════════════
+     MAIN CALCULATE
+  ════════════════════════════════════════════════════ */
+  function calculate() {
+    /* ── Read inputs ── */
+    const price     = parseFloat($('price-input').value)   || 0;
+    const rate      = parseFloat($('rate-input').value)    || 0;
+    const termMo    = parseInt($('loan-term').value)       || 360;
+    const loanType  = $('loan-type').value;
+    const downPct   = parseFloat($('down-pct').value)      || 0;
+    const downAmt   = parseFloat($('down-amt').value)      || 0;
+    const taxPct    = parseFloat($('tax-rate').value)      || 0;
+    const insurAnn  = parseFloat($('insurance').value)     || 0;
+    const hoa       = parseFloat($('hoa').value)           || 0;
+    const income    = parseFloat($('income').value)        || 0;
+    const debts     = parseFloat($('debts').value)         || 0;
+    const savings   = parseFloat($('savings').value)       || 0;
+    const closingPct = parseFloat($('closing-pct').value)  || 3;
+
+    /* ── Assumptions ── */
+    const assumptions = {
+      convPMI:  parseFloat($('conv-pmi').value)  || 0.85,
+      fhaMIP:   parseFloat($('fha-mip').value)   || 0.55,
+      fhaUFMIP: parseFloat($('fha-ufmip').value) || 1.75,
+      usdaFee:  parseFloat($('usda-fee').value)  || 0.35,
+      vaFee:    parseFloat($('va-fee').value)     || 2.15,
+    };
+
+    const loanAmount = Math.max(0, price - downAmt);
+    const ltv = calcLTV(price, downAmt);
+    const ltvPct = ltv * 100;
+
+    /* ── P&I ── */
+    const pi = calcPI(loanAmount, rate, termMo);
+    const { principal, interest } = calcFirstPrincipal(loanAmount, rate, termMo);
+
+    /* ── T&I ── */
+    const monthlyTax  = (price * taxPct / 100) / 12;
+    const monthlyInsu = insurAnn / 12;
+
+    /* ── PMI/MIP ── */
+    const mi = calcMortgageInsurance(loanType, loanAmount, price, downAmt, assumptions);
+
+    /* ── Totals ── */
+    const pitiBase = pi + monthlyTax + monthlyInsu + mi.monthly + hoa;
+    const totalMonthly = pitiBase;
+
+    /* ── DTI ── */
+    const frontDTI = income > 0 ? totalMonthly / income : 0;
+    const backDTI  = income > 0 ? (totalMonthly + debts) / income : 0;
+
+    /* ── Cash to Close ── */
+    const closingCosts = price * (closingPct / 100);
+    const totalCash    = downAmt + closingCosts + (mi.upfront || 0);
+    const cashAfter    = savings - totalCash;
+
+    /* ════ UPDATE DOM ════ */
+
+    /* Key Numbers */
+    $('out-loan').textContent     = fmt(loanAmount);
+    $('out-ltv').textContent      = `LTV: ${pct(ltvPct)} · ${ltvPct > 80 ? '⚠ >80%' : '✓ ≤80%'}`;
+    $('out-piti').textContent     = fmt(totalMonthly);
+    $('out-piti-sub').textContent = `incl. PMI/MIP & HOA`;
+
+    $('out-ctc').textContent       = fmt(totalCash);
+    $('out-ctc').className         = 'value ' + (savings >= totalCash ? '' : 'red');
+    $('out-remaining').textContent = fmt(cashAfter);
+    $('out-remaining').className   = 'value ' + (cashAfter >= 0 ? 'green' : 'red');
+
+    /* PITI rows */
+    $('out-principal').textContent    = fmt(principal);
+    $('out-interest').textContent     = fmt(interest);
+    $('out-tax').textContent          = fmt(monthlyTax);
+    $('out-insurance').textContent    = fmt(monthlyInsu);
+    $('out-pmi').textContent          = fmt(mi.monthly);
+    $('out-hoa').textContent          = fmt(hoa);
+    $('out-total-monthly').textContent = fmt(totalMonthly);
+    $('pmi-label').textContent        = mi.label;
+
+    /* PMI Badge */
+    const badge = $('pmi-badge');
+    if (mi.active && mi.monthly > 0) {
+      badge.className = 'pmi-badge active';
+      badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        ${mi.label} Active · ${fmt(mi.monthly)}/mo`;
+    } else {
+      badge.className = 'pmi-badge none';
+      badge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        No ${mi.label}`;
+    }
+
+    /* PITI Stacked Bar */
+    const barTotal = totalMonthly || 1;
+    $('bar-p').style.width   = pct(principal   / barTotal * 100);
+    $('bar-i').style.width   = pct(interest    / barTotal * 100);
+    $('bar-t').style.width   = pct(monthlyTax  / barTotal * 100);
+    $('bar-ins').style.width = pct(monthlyInsu / barTotal * 100);
+    $('bar-pmi').style.width = pct(mi.monthly  / barTotal * 100);
+
+    /* DTI */
+    const feStatus = dtiStatus(frontDTI, true);
+    const beStatus = dtiStatus(backDTI, false);
+
+    $('out-fedti').textContent      = pct(frontDTI * 100);
+    $('out-fedti').style.color      = feStatus.color;
+    $('fill-fedti').style.width     = pct(clamp(frontDTI * 100, 0, 100));
+    $('fill-fedti').style.background = feStatus.color;
+    $('explain-fedti').textContent  = feStatus.explanation;
+
+    $('out-bedti').textContent       = pct(backDTI * 100);
+    $('out-bedti').style.color       = beStatus.color;
+    $('fill-bedti').style.width      = pct(clamp(backDTI * 100, 0, 100));
+    $('fill-bedti').style.background = beStatus.color;
+    $('explain-bedti').textContent   = beStatus.explanation;
+
+    /* Cash to Close */
+    $('ctc-down').textContent    = fmt(downAmt);
+    $('ctc-closing').textContent = fmt(closingCosts);
+    $('ctc-total').textContent   = fmt(totalCash);
+    $('ctc-remaining').textContent = fmt(cashAfter);
+    $('ctc-remaining').style.color = cashAfter >= 0 ? 'var(--green)' : 'var(--red)';
+    $('out-remaining').textContent = fmt(cashAfter);
+    $('out-remaining').className   = 'value ' + (cashAfter >= 0 ? 'green' : 'red');
+
+    /* Upfront fee row */
+    const upfrontRow = $('ctc-upfront-row');
+    if (mi.upfront > 0) {
+      upfrontRow.style.display = '';
+      $('ctc-upfront-label').textContent = mi.label + ' (Upfront)';
+      $('ctc-upfront').textContent       = fmt(mi.upfront);
+    } else {
+      upfrontRow.style.display = 'none';
+    }
+  }
+
+  /* ════════════════════════════════════════════════════
+     SLIDER ↔ NUMBER SYNC
+  ════════════════════════════════════════════════════ */
+  function syncSliders() {
+    /* Price */
+    $('price-slider').addEventListener('input', () => {
+      $('price-input').value = $('price-slider').value;
+      syncDown();
+      calculate();
+    });
+    $('price-input').addEventListener('input', () => {
+      $('price-slider').value = $('price-input').value;
+      syncDown();
+      calculate();
+    });
+
+    /* Rate */
+    $('rate-slider').addEventListener('input', () => {
+      $('rate-input').value = $('rate-slider').value;
+      calculate();
+    });
+    $('rate-input').addEventListener('input', () => {
+      $('rate-slider').value = $('rate-input').value;
+      calculate();
+    });
+  }
+
+  /* Keep down-payment % and $ in sync */
+  let _downSyncing = false;
+  function syncDown() {
+    if (_downSyncing) return;
+    _downSyncing = true;
+    const price   = parseFloat($('price-input').value) || 0;
+    const pctVal  = parseFloat($('down-pct').value)    || 0;
+    $('down-amt').value = Math.round(price * pctVal / 100);
+    _downSyncing = false;
+  }
+
+  $('down-pct').addEventListener('input', () => {
+    if (_downSyncing) return;
+    _downSyncing = true;
+    const price = parseFloat($('price-input').value) || 0;
+    const p     = parseFloat($('down-pct').value)    || 0;
+    $('down-amt').value = Math.round(price * p / 100);
+    _downSyncing = false;
+    calculate();
+  });
+
+  $('down-amt').addEventListener('input', () => {
+    if (_downSyncing) return;
+    _downSyncing = true;
+    const price = parseFloat($('price-input').value) || 0;
+    const a     = parseFloat($('down-amt').value)    || 0;
+    $('down-pct').value = price > 0 ? ((a / price) * 100).toFixed(2) : 0;
+    _downSyncing = false;
+    calculate();
+  });
+
+  /* ════════════════════════════════════════════════════
+     ATTACH ALL OTHER LISTENERS
+  ════════════════════════════════════════════════════ */
+  function attachListeners() {
+    const ids = [
+      'loan-type','loan-term','tax-rate','insurance','hoa',
+      'income','debts','savings',
+      'conv-pmi','fha-mip','fha-ufmip','usda-fee','va-fee','closing-pct',
+    ];
+    ids.forEach(id => {
+      const el = $(id);
+      if (el) el.addEventListener('input', calculate);
+    });
+  }
+
+  /* ════════════════════════════════════════════════════
+     INIT
+  ════════════════════════════════════════════════════ */
+  (function init() {
+    syncSliders();
+    attachListeners();
+    syncDown();
+    calculate();
+  })();
+</script>
+<script src="form-state-url.js"></script>
+</body>
+</html>
